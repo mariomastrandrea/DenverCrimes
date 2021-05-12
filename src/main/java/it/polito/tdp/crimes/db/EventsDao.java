@@ -29,9 +29,7 @@ public class EventsDao
 			while(queryResult.next())
 				categorie.add(queryResult.getString("offense_category_id"));
 			
-			queryResult.close();
-			statement.close();
-			connection.close();
+			DBConnect.close(queryResult, statement, connection);
 		}
 		catch(SQLException sqle)
 		{
@@ -63,9 +61,7 @@ public class EventsDao
 			while(queryResult.next())
 				vertici.add(queryResult.getString("offense_type_id"));
 			
-			queryResult.close();
-			statement.close();
-			connection.close();
+			DBConnect.close(queryResult, statement, connection);
 		}
 		catch(SQLException sqle)
 		{
@@ -78,6 +74,7 @@ public class EventsDao
 	
 	public Collection<Adiacenza> getAdiacenze(String categoria, int mese)
 	{
+		/*
 		String sqlQuery = String.format("%s %s %s %s %s %s %s", 
 				"SELECT e1.offense_type_id AS v1, e2.offense_type_id AS v2, COUNT(DISTINCT e1.neighborhood_id) AS peso",
 				"FROM events e1, events e2",
@@ -86,6 +83,18 @@ public class EventsDao
 					"AND e1.offense_type_id < e2.offense_type_id",
 					"AND e1.neighborhood_id = e2.neighborhood_id",
 				"GROUP BY e1.offense_type_id, e2.offense_type_id");
+		*/
+		
+		String sqlQuery = String.format("%s %s %s %s %s %s %s %s %s", 
+				"SELECT t1.offense, t2.offense, COUNT(DISTINCT t1.neighborhood) AS weight",
+				"FROM (SELECT DISTINCT offense_type_id AS offense, neighborhood_id AS neighborhood",
+						"FROM events",
+						"WHERE MONTH(reported_date) = ? AND offense_category_id = ?) t1,",
+						"(SELECT DISTINCT offense_type_id AS offense, neighborhood_id AS neighborhood",
+						"FROM events",
+						"WHERE MONTH(reported_date) = ? AND offense_category_id = ?) t2",
+				"WHERE t1.offense < t2.offense AND t1.neighborhood = t2.neighborhood",
+				"GROUP BY t1.offense, t2.offense");
 		
 		Collection<Adiacenza> adiacenze = new HashSet<>();
 		
@@ -93,24 +102,25 @@ public class EventsDao
 		{
 			Connection connection = DBConnect.getConnection();
 			PreparedStatement statement = connection.prepareStatement(sqlQuery);
-			statement.setString(1, categoria);
-			statement.setInt(2, mese);
+			statement.setInt(1, mese);
+			statement.setString(2, categoria);
+			statement.setInt(3, mese);
+			statement.setString(4, categoria);
+			
 			ResultSet queryResult = statement.executeQuery();
 			
 			while(queryResult.next())
 			{
-				String v1 = queryResult.getString("v1");
-				String v2 = queryResult.getString("v2");
-				int peso = queryResult.getInt("peso");
+				String v1 = queryResult.getString("t1.offense");
+				String v2 = queryResult.getString("t2.offense");
+				int peso = queryResult.getInt("weight");
 				
-				Adiacenza newAdiacenza = new Adiacenza(v1,v2,peso);
+				Adiacenza newAdiacenza = new Adiacenza(v1, v2, peso);
 				
 				adiacenze.add(newAdiacenza);
 			}
 			
-			queryResult.close();
-			statement.close();
-			connection.close();
+			DBConnect.close(queryResult, statement, connection);
 		}
 		catch(SQLException sqle)
 		{
@@ -120,57 +130,6 @@ public class EventsDao
 		
 		return adiacenze;
 	}
-	
-	/*
-	public List<Event> listAllEvents()
-	{
-		String sql = "SELECT * FROM events";
-		try {
-			Connection conn = DBConnect.getConnection();
-
-			PreparedStatement st = conn.prepareStatement(sql);
-			
-			List<Event> list = new ArrayList<>();
-			
-			ResultSet res = st.executeQuery();
-			
-			while(res.next()) 
-			{
-				try 
-				{
-					list.add(new Event(res.getLong("incident_id"),
-							res.getInt("offense_code"),
-							res.getInt("offense_code_extension"), 
-							res.getString("offense_type_id"), 
-							res.getString("offense_category_id"),
-							res.getTimestamp("reported_date").toLocalDateTime(),
-							res.getString("incident_address"),
-							res.getDouble("geo_lon"),
-							res.getDouble("geo_lat"),
-							res.getInt("district_id"),
-							res.getInt("precinct_id"), 
-							res.getString("neighborhood_id"),
-							res.getInt("is_crime"),
-							res.getInt("is_traffic")));
-				} 
-				catch (Throwable t) 
-				{
-					t.printStackTrace();
-					System.out.println(res.getInt("id"));
-				}
-			}
-			
-			conn.close();
-			return list;
-
-		} 
-		catch (SQLException e) 
-		{
-			e.printStackTrace();
-			return null ;
-		}
-	}
-	*/
 }
 
 

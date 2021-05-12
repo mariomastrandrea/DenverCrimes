@@ -5,9 +5,11 @@
 package it.polito.tdp.crimes;
 
 import java.net.URL;
-import java.util.LinkedList;
+import java.util.Collection;
+import java.util.List;
 import java.util.ResourceBundle;
 
+import it.polito.tdp.crimes.model.Adiacenza;
 import it.polito.tdp.crimes.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -17,78 +19,201 @@ import javafx.scene.control.TextArea;
 
 public class FXMLController 
 {	
-	private Model model;
-
-    @FXML 
+	@FXML
     private ResourceBundle resources;
 
-    @FXML 
+    @FXML
     private URL location;
 
-    @FXML 
-    private ComboBox<String> boxCategoria; 
-
-    @FXML 
-    private ComboBox<Integer> boxMese; 
-
-    @FXML 
-    private Button btnAnalisi; 
-
-    @FXML 
-    private ComboBox<?> boxArco; 
-
-    @FXML 
-    private Button btnPercorso; 
-
-    @FXML 
-    private TextArea txtResult; 
+    @FXML
+    private ComboBox<String> categoriaComboBox;
 
     @FXML
-    void doCalcolaPercorso(ActionEvent event) 
-    {
+    private ComboBox<Integer> meseComboBox;
 
+    @FXML
+    private Button analisiQuartieriButton;
+
+    @FXML
+    private ComboBox<Adiacenza> arcoComboBox;
+
+    @FXML
+    private Button calcoloPercorsoButton;
+
+    @FXML
+    private TextArea resultTextArea;
+    
+	private Model model;
+	
+	
+	@FXML
+    void handleCategoriaSelected(ActionEvent event) 
+	{
+		this.checkCategoriaEMese();
     }
-
-    @FXML
-    void doCreaGrafo(ActionEvent event) 
-    {
-    	String categoria = this.boxCategoria.getValue();
-    	Integer mese = this.boxMese.getValue();
+	
+	@FXML
+    void handleMeseSelected(ActionEvent event) 
+	{
+		this.checkCategoriaEMese();
+    }
+	
+	private void checkCategoriaEMese()
+	{
+		String categoria = this.categoriaComboBox.getValue();
+    	Integer mese = this.meseComboBox.getValue();
+    	
+    	if(categoria == null || mese == null)
+    		this.analisiQuartieriButton.setDisable(true);
+    	else
+    		this.analisiQuartieriButton.setDisable(false);
+	}
+	
+	@FXML
+    void handleAnalisiQuartieri(ActionEvent event) 
+	{
+    	String categoria = this.categoriaComboBox.getValue();
+    	Integer mese = this.meseComboBox.getValue();
     	
     	if(categoria == null || mese == null)
     	{
-    		this.txtResult.setText("Seleziona entrambi i valori di input!");
+    		this.resultTextArea.setText("Errore di input (categoria o mese)");
     		return;
     	}
     	
     	this.model.creaGrafo(categoria, mese);
     	
-    	for(var v : this.model.getArchiSuperioriAllaMedia())
+    	StringBuilder output = new StringBuilder();
+    	
+    	String infoGrafo = this.printInfoGrafo();
+    	output.append(infoGrafo).append("\n\n");
+    	
+    	Collection<Adiacenza> archiSuperioriAllaMedia = this.model.getArchiSuperioriAllaMedia();
+    	
+    	if(archiSuperioriAllaMedia.isEmpty())
     	{
-    		this.txtResult.appendText(v.toString() + "\n");
+    		output.append("Errore: non esistono archi con peso superiore alla media");
+    		this.resultTextArea.setText(output.toString());
+    		return;
     	}
+    	
+    	String infoArchi = this.printArchi(archiSuperioriAllaMedia);
+    	output.append(infoArchi);
+   
+    	
+    	//update UI
+    	this.resultTextArea.setText(output.toString());
+    	
+    	this.arcoComboBox.setDisable(false);
+    	this.arcoComboBox.setValue(null);
+    	this.arcoComboBox.getItems().clear();
+    	this.arcoComboBox.getItems().addAll(archiSuperioriAllaMedia);
+    }
+	
+	private String printArchi(Collection<Adiacenza> archi)
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("Gli archi con peso superiore alla media sono ").append(archi.size()).append(":\n");
+		
+		for(Adiacenza a : archi)
+		{
+			sb.append("•  ");
+			sb.append(a.print()).append("\n");
+		}
+		
+		if(!archi.isEmpty())
+			sb.deleteCharAt(sb.length() - 1);
+		
+		return sb.toString();
+	}
+
+	private String printInfoGrafo()
+	{
+		int numVertici = this.model.getNumVertici();
+		int numArchi = this.model.getNumArchi();
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("Grafo creato!\n");
+		sb.append("# Vertici: ").append(numVertici).append("\n");
+		sb.append("# Archi: ").append(numArchi);
+		
+		return sb.toString();
+	}
+
+	@FXML
+    void handleArcoSelected(ActionEvent event) 
+	{
+		Adiacenza selected = this.arcoComboBox.getValue();
+		
+		if(selected == null)
+			this.calcoloPercorsoButton.setDisable(true);
+		else
+			this.calcoloPercorsoButton.setDisable(false);
     }
 
-    @FXML 
-    void initialize() 
-    {
-        assert boxCategoria != null : "fx:id=\"boxCategoria\" was not injected: check your FXML file 'Scene.fxml'.";
-        assert boxMese != null : "fx:id=\"boxMese\" was not injected: check your FXML file 'Scene.fxml'.";
-        assert btnAnalisi != null : "fx:id=\"btnAnalisi\" was not injected: check your FXML file 'Scene.fxml'.";
-        assert boxArco != null : "fx:id=\"boxArco\" was not injected: check your FXML file 'Scene.fxml'.";
-        assert btnPercorso != null : "fx:id=\"btnPercorso\" was not injected: check your FXML file 'Scene.fxml'.";
-        assert txtResult != null : "fx:id=\"txtResult\" was not injected: check your FXML file 'Scene.fxml'.";
+	@FXML
+	void handleCalcolaPercorso(ActionEvent event) 
+	{
+		Adiacenza selected = this.arcoComboBox.getValue();
+		
+		String cat1 = selected.getV1();
+		String cat2 = selected.getV2();
+		
+		List<String> percorsoPiuLungo = this.model.trovaPercorsoPiuLungo(cat1, cat2);
+		
+		if(percorsoPiuLungo.isEmpty() || percorsoPiuLungo.size() == 1)
+		{
+			this.resultTextArea.setText("Errore: percorso piu' lungo non trovato.");
+			return;
+		}
+		
+		StringBuilder output = new StringBuilder();
+		output.append("Trovato il percorso aciclico più lungo da \"");
+		output.append(cat1).append("\" a \"").append(cat2).append("\":\n\n");
+		
+		String percorsoText = this.printPercorso(percorsoPiuLungo);
+		output.append(percorsoText);
+		
+		this.resultTextArea.setText(output.toString());
     }
+
+	private String printPercorso(List<String> percorsoPiuLungo)
+	{
+		StringBuilder sb = new StringBuilder();
+		
+		int count = 0;
+		for(String categoria : percorsoPiuLungo)
+		{
+			if(count > 0)
+				sb.append("\n");
+			
+			sb.append(++count).append(") ");
+			sb.append(categoria);
+		}
+		
+		return sb.toString();
+	}
+
+	@FXML
+	void initialize() 
+	{
+		assert categoriaComboBox != null : "fx:id=\"categoriaComboBox\" was not injected: check your FXML file 'Scene_DenverCrimes.fxml'.";
+		assert meseComboBox != null : "fx:id=\"meseComboBox\" was not injected: check your FXML file 'Scene_DenverCrimes.fxml'.";
+		assert analisiQuartieriButton != null : "fx:id=\"analisiQuartieriButton\" was not injected: check your FXML file 'Scene_DenverCrimes.fxml'.";
+		assert arcoComboBox != null : "fx:id=\"arcoComboBox\" was not injected: check your FXML file 'Scene_DenverCrimes.fxml'.";
+		assert calcoloPercorsoButton != null : "fx:id=\"calcoloPercorsoButton\" was not injected: check your FXML file 'Scene_DenverCrimes.fxml'.";
+		assert resultTextArea != null : "fx:id=\"resultTextArea\" was not injected: check your FXML file 'Scene_DenverCrimes.fxml'.";
+	}
     
     public void setModel(Model model) 
     {
     	this.model = model;
-    	this.boxCategoria.getItems().addAll(this.model.getAllCategorie());
     	
-    	LinkedList<Integer> mesi = new LinkedList<>();
-    	for(int i=1; i<=12; i++)
-    		mesi.add(i);
+    	Collection<String> categorie = this.model.getAllCategorie();
+    	this.categoriaComboBox.getItems().addAll(categorie);
     	
-    	this.boxMese.getItems().addAll(mesi);
+    	Collection<Integer> mesi = this.model.getMesi();
+    	this.meseComboBox.getItems().addAll(mesi);
     }
 }

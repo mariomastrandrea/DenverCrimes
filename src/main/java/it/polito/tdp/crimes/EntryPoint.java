@@ -15,7 +15,7 @@ public class EntryPoint extends Application
     @Override
     public void start(Stage stage) throws Exception 
     {
-    	FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Scene.fxml"));
+    	FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Scene_DenverCrimes.fxml"));
     	Parent root = loader.load();
         Scene scene = new Scene(root);
          

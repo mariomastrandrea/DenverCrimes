@@ -16,12 +16,13 @@ public class Model
 {
 	private Graph<String, DefaultWeightedEdge> grafo;
 	private EventsDao dao;
-	private List<String> percorsoMigliore;
+	private LinkedList<String> percorsoMigliore;
 	
 	
 	public Model()
 	{
 		this.dao = new EventsDao();
+		this.percorsoMigliore = new LinkedList<>();
 	}
 	
 	public void creaGrafo(String categoria, int mese)
@@ -33,7 +34,6 @@ public class Model
 		Graphs.addAllVertices(this.grafo, vertici);
 		
 		// aggiunta archi
-		
 		Collection<Adiacenza> adiacenze = this.dao.getAdiacenze(categoria, mese);
 		
 		for(Adiacenza a : adiacenze)
@@ -46,10 +46,9 @@ public class Model
 			{
 				Graphs.addEdge(this.grafo, v1, v2, peso);
 			}
+			else
+				System.out.println("OPS!");
 		}
-		
-		System.out.println("#Vertici: " + this.grafo.vertexSet().size());
-		System.out.println("#Archi: " + this.grafo.edgeSet().size());
 	}
 	
 	public Collection<Adiacenza> getArchiSuperioriAllaMedia()
@@ -60,14 +59,16 @@ public class Model
 		{
 			pesoMedio += this.grafo.getEdgeWeight(edge);
 		}
-		
-		pesoMedio /= (double)this.grafo.edgeSet().size();
+			
+		if(!this.grafo.edgeSet().isEmpty())
+			pesoMedio /= (double)this.grafo.edgeSet().size();
 		
 		Collection<Adiacenza> archiConPesoSuperioreAllaMedia = new HashSet<>();
 		
 		for(DefaultWeightedEdge edge : this.grafo.edgeSet())
 		{
 			double weight = this.grafo.getEdgeWeight(edge);
+			
 			if(weight > pesoMedio)
 			{
 				String source = this.grafo.getEdgeSource(edge);
@@ -82,10 +83,11 @@ public class Model
 	
 	public List<String> trovaPercorsoPiuLungo(String sorgente, String destinazione)
 	{
-		this.percorsoMigliore = new LinkedList<>();	
-		LinkedList<String> soluzioneParziale = new LinkedList<>();
+		this.percorsoMigliore.clear();	
 		
+		LinkedList<String> soluzioneParziale = new LinkedList<>();
 		soluzioneParziale.add(sorgente);
+		
 		cercaRicorsivamente(destinazione, soluzioneParziale);
 		
 		return this.percorsoMigliore;
@@ -125,6 +127,21 @@ public class Model
 	public Collection<String> getAllCategorie()
 	{
 		return this.dao.getAllCategorie();
+	}
+
+	public Collection<Integer> getMesi()
+	{
+		return List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+	}
+
+	public int getNumVertici()
+	{
+		return this.grafo.vertexSet().size();
+	}
+	
+	public int getNumArchi()
+	{
+		return this.grafo.edgeSet().size();
 	}
 }
 

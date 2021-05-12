@@ -71,7 +71,12 @@ public class Adiacenza
 	@Override
 	public String toString()
 	{
-		return String.format("%s  %s  %.2f", v1, v2, peso);
+		return String.format("%s  <-->  %s", v1, v2);
+	}
+
+	public String print()
+	{
+		return String.format("%s  <-->  %s  |  peso = %.2f", v1, v2, peso);
 	}
 	
 }
